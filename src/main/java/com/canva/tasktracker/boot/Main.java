@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 public class Main {
     private static final List<Task> ROOTS = new ArrayList<>();
     private static final Map<UUID, Task> INDEX = new HashMap<>();
-    private static final Path DATA_DIR  = Path.of(System.getProperty("user.home"), ".dtt");
+    private static final Path DATA_DIR = Path.of(System.getProperty("user.home"), ".dtt");
     private static final Path DATA_FILE = DATA_DIR.resolve("tasks.tsv");
     private static final Logger LOG = LoggerUtil.get();
 
@@ -38,48 +38,50 @@ public class Main {
         }
 
         try {
-            switch (args[0]) {
-                case "add-group" -> {
-                    Validator.requireArgs(args, 2, "Uso: add-group \"TitoloProgetto\"");
-                    String title = Validator.title(joinArgs(args, 1));
-                    TaskGroup g = new TaskGroup(title);
-                    ROOTS.add(g);
-                    INDEX.put(g.id(), g);
-                    System.out.println("Creato gruppo: " + g.title() + " | id=" + g.id());
-                    saveToFile();
-                }
-                case "add" -> {
-                    // add <PARENT_ID or ROOT> <TYPE> <PRIORITY> <YYYY-MM-DD> "TitoloTask"
-                    Validator.requireArgs(args, 6,
-                            "Uso: add <PARENT_ID or ROOT> <TYPE> <PRIORITY> <YYYY-MM-DD> \"TitoloTask\"");
-                    String parentArg = args[1];
-                    TaskType type = Validator.taskType(args[2]);
-                    Priority pr = Validator.priority(args[3]);
-                    LocalDate due = Validator.dateISO(args[4]);
-                    String title = Validator.title(joinArgs(args, 5));
+            String command = args[0];
 
-                    Task t = TaskFactory.create(type, title, pr, due);
+            if ("add-group".equals(command)) {
+                Validator.requireArgs(args, 2, "Uso: add-group \"TitoloProgetto\"");
+                String title = Validator.title(joinArgs(args, 1));
+                TaskGroup g = new TaskGroup(title);
+                ROOTS.add(g);
+                INDEX.put(g.id(), g);
+                System.out.println("Creato gruppo: " + g.title() + " | id=" + g.id());
+                saveToFile();
+            } else if ("add".equals(command)) {
+                // add <PARENT_ID or ROOT> <TYPE> <PRIORITY> <YYYY-MM-DD> "TitoloTask"
+                Validator.requireArgs(args, 6,
+                        "Uso: add <PARENT_ID or ROOT> <TYPE> <PRIORITY> <YYYY-MM-DD> \"TitoloTask\"");
+                String parentArg = args[1];
+                TaskType type = Validator.taskType(args[2]);
+                Priority pr = Validator.priority(args[3]);
+                LocalDate due = Validator.dateISO(args[4]);
+                String title = Validator.title(joinArgs(args, 5));
 
-                    if (parentArg.equalsIgnoreCase("ROOT")) {
-                        ROOTS.add(t);
-                    } else {
-                        UUID pid = Validator.uuid(parentArg);
-                        Task parent = INDEX.get(pid);
-                        if (parent == null) throw new AppException(AppErrorCode.VALIDATION, "Parent non trovato: " + pid);
-                        parent.add(t);
-                    }
-                    INDEX.put(t.id(), t);
-                    System.out.println("Creato task: " + t.title() + " | id=" + t.id());
-                    saveToFile();
+                Task t = TaskFactory.create(type, title, pr, due);
+
+                if (parentArg.equalsIgnoreCase("ROOT")) {
+                    ROOTS.add(t);
+                } else {
+                    UUID pid = Validator.uuid(parentArg);
+                    Task parent = INDEX.get(pid);
+                    if (parent == null) throw new AppException(AppErrorCode.VALIDATION, "Parent non trovato: " + pid);
+                    parent.add(t);
                 }
-                case "list-tree" -> printTree();
-                case "list-flat" -> printFlat();
-                case "sort-flat" -> printSortedSimpleTasks();
-                case "debug-paths" -> debugPaths();
-                default -> {
-                    System.out.println("Comando sconosciuto.");
-                    printHelp();
-                }
+                INDEX.put(t.id(), t);
+                System.out.println("Creato task: " + t.title() + " | id=" + t.id());
+                saveToFile();
+            } else if ("list-tree".equals(command)) {
+                printTree();
+            } else if ("list-flat".equals(command)) {
+                printFlat();
+            } else if ("sort-flat".equals(command)) {
+                printSortedSimpleTasks();
+            } else if ("debug-paths".equals(command)) {
+                debugPaths();
+            } else {
+                System.out.println("Comando sconosciuto.");
+                printHelp();
             }
         } catch (AppException ae) {
             LOG.info(ae.code() + " - " + ae.getMessage());
@@ -95,18 +97,18 @@ public class Main {
     private static void printHelp() {
         System.out.println("Design Task Tracker ▶ Composite + Factory + Iterator + TSV");
         System.out.println("Comandi:");
-        System.out.println("  add-group \"TitoloProgetto\"");
-        System.out.println("  add <PARENT_ID or ROOT> <TYPE> <PRIORITY> <YYYY-MM-DD> \"TitoloTask\"");
-        System.out.println("      TYPE: DESIGN | REVIEW | PUBLISH");
-        System.out.println("  list-tree");
-        System.out.println("  list-flat");
-        System.out.println("  sort-flat");
-        System.out.println("  debug-paths");
+        System.out.println("  add-group \"TitoloProgetto\"");
+        System.out.println("  add <PARENT_ID or ROOT> <TYPE> <PRIORITY> <YYYY-MM-DD> \"TitoloTask\"");
+        System.out.println("      TYPE: DESIGN | REVIEW | PUBLISH");
+        System.out.println("  list-tree");
+        System.out.println("  list-flat");
+        System.out.println("  sort-flat");
+        System.out.println("  debug-paths");
         System.out.println();
         System.out.println("Esempi:");
-        System.out.println("  add-group \"Brand Refresh\"");
-        System.out.println("  add ROOT DESIGN HIGH 2025-09-20 \"Task root\"");
-        System.out.println("  add <UUID_GRUPPO> REVIEW MEDIUM 2025-09-10 \"Crea poster\"");
+        System.out.println("  add-group \"Brand Refresh\"");
+        System.out.println("  add ROOT DESIGN HIGH 2025-09-20 \"Task root\"");
+        System.out.println("  add <UUID_GRUPPO> REVIEW MEDIUM 2025-09-10 \"Crea poster\"");
     }
 
     /* =================== STAMPE =================== */
@@ -120,9 +122,9 @@ public class Main {
     }
 
     private static void printNode(Task t, int depth) {
-        String indent = "  ".repeat(depth);
+        String indent = "  ".repeat(depth);
         String type = (t instanceof TaskGroup) ? "[G]" : "[T]";
-        String due  = t.dueDate().map(LocalDate::toString).orElse("-");
+        String due = t.dueDate().map(LocalDate::toString).orElse("-");
         System.out.println(indent + type + " " + t.title()
                 + " | id=" + t.id()
                 + " | prio=" + t.priority()
@@ -140,7 +142,7 @@ public class Main {
             Task task = it.next();
             if (task.title().equals("__ROOT__")) continue;
             String type = (task instanceof TaskGroup) ? "[G]" : "[T]";
-            String due  = task.dueDate().map(LocalDate::toString).orElse("-");
+            String due = task.dueDate().map(LocalDate::toString).orElse("-");
             System.out.println(type + " " + task.title()
                     + " | id=" + task.id()
                     + " | prio=" + task.priority()
@@ -160,22 +162,22 @@ public class Main {
             return;
         }
         all.stream()
-           .sorted(Comparator
-                   .comparing((SimpleTask t) -> t.priority().getWeight()).reversed()
-                   .thenComparing(t -> t.dueDate().orElse(LocalDate.MAX)))
-           .forEach(t -> System.out.println("- " + t.title()
-                   + " | id=" + t.id()
-                   + " | prio=" + t.priority()
-                   + " | due=" + t.dueDate().map(LocalDate::toString).orElse("-")));
+                .sorted(Comparator
+                        .comparing((SimpleTask t) -> t.priority().getWeight()).reversed()
+                        .thenComparing(t -> t.dueDate().orElse(LocalDate.MAX)))
+                .forEach(t -> System.out.println("- " + t.title()
+                        + " | id=" + t.id()
+                        + " | prio=" + t.priority()
+                        + " | due=" + t.dueDate().map(LocalDate::toString).orElse("-")));
     }
 
     /* =================== DIAGNOSTICA =================== */
 
     private static void debugPaths() {
-        System.out.println("HOME       : " + System.getProperty("user.home"));
-        System.out.println("DATA_DIR   : " + DATA_DIR.toAbsolutePath());
-        System.out.println("DATA_FILE  : " + DATA_FILE.toAbsolutePath());
-        System.out.println("LOG_FILE   : " + DATA_DIR.resolve("app.log").toAbsolutePath());
+        System.out.println("HOME       : " + System.getProperty("user.home"));
+        System.out.println("DATA_DIR   : " + DATA_DIR.toAbsolutePath());
+        System.out.println("DATA_FILE  : " + DATA_FILE.toAbsolutePath());
+        System.out.println("LOG_FILE   : " + DATA_DIR.resolve("app.log").toAbsolutePath());
         System.out.println("DIR EXISTS : " + Files.exists(DATA_DIR));
         System.out.println("FILE EXISTS: " + Files.exists(DATA_FILE));
     }
@@ -267,7 +269,18 @@ public class Main {
     /* =================== UTILITY =================== */
 
     private static String joinArgs(String[] args, int startIndex) {
-        String joined = Arrays.stream(args).skip(startIndex).collect(Collectors.joining(" "));
-        return joined.replaceAll("^[\"“”]+|[\"“”]+$", "").trim();
+        StringBuilder sb = new StringBuilder();
+        for (int i = startIndex; i < args.length; i++) {
+            sb.append(args[i]);
+            if (i < args.length - 1) {
+                sb.append(" ");
+            }
+        }
+        String joined = sb.toString().trim();
+        // Rimuove le virgolette all'inizio e alla fine se presenti
+        if (joined.startsWith("\"") && joined.endsWith("\"")) {
+            return joined.substring(1, joined.length() - 1);
+        }
+        return joined;
     }
 }
