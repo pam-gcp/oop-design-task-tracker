@@ -15,16 +15,23 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
- * CLI con Composite + Iterator + Factory + Exception Shielding + Logging
+ * Design Task Tracker: a CLI application that manages a hierarchy of tasks
+ * using object-oriented programming principles and design patterns.
  */
 public class Main {
+    // Lists and maps that act as an "in-memory database" for tasks
     private static final List<Task> ROOTS = new ArrayList<>();
     private static final Map<UUID, Task> INDEX = new HashMap<>();
+
+    // Paths for persistence files. We use the user's home directory.
     private static final Path DATA_DIR = Path.of(System.getProperty("user.home"), ".dtt");
     private static final Path DATA_FILE = DATA_DIR.resolve("tasks.tsv");
+
+    // Logger for managing events and errors.
     private static final Logger LOG = LoggerUtil.get();
 
     public static void main(String[] args) {
+        // Initial data loading. Handles I/O errors at startup.
         try {
             loadFromFile();
         } catch (IOException e) {
@@ -32,15 +39,20 @@ public class Main {
             System.out.println("Attenzione: errore I/O caricando i dati.");
         }
 
+        // If there are no arguments, show help.
         if (args.length == 0) {
             printHelp();
             return;
         }
 
+        // Try-catch block for Exception Shielding: handles all exceptions,
+        // showing a simple message to the user.
         try {
             String command = args[0];
 
+            // Analysis of commands using an if-else if chain.
             if ("add-group".equals(command)) {
+                // Logic for adding a new task group
                 Validator.requireArgs(args, 2, "Uso: add-group \"TitoloProgetto\"");
                 String title = Validator.title(joinArgs(args, 1));
                 TaskGroup g = new TaskGroup(title);
@@ -49,7 +61,7 @@ public class Main {
                 System.out.println("Creato gruppo: " + g.title() + " | id=" + g.id());
                 saveToFile();
             } else if ("add".equals(command)) {
-                // add <PARENT_ID or ROOT> <TYPE> <PRIORITY> <YYYY-MM-DD> "TitoloTask"
+                // Logic for adding a task. Use of the Factory Method.
                 Validator.requireArgs(args, 6,
                         "Uso: add <PARENT_ID or ROOT> <TYPE> <PRIORITY> <YYYY-MM-DD> \"TitoloTask\"");
                 String parentArg = args[1];
@@ -60,6 +72,8 @@ public class Main {
 
                 Task t = TaskFactory.create(type, title, pr, due);
 
+                // Composite pattern logic: a task can be added
+                // to an existing group or to the root of the tree.
                 if (parentArg.equalsIgnoreCase("ROOT")) {
                     ROOTS.add(t);
                 } else {
@@ -72,10 +86,13 @@ public class Main {
                 System.out.println("Creato task: " + t.title() + " | id=" + t.id());
                 saveToFile();
             } else if ("list-tree".equals(command)) {
+                // Recursive tree traversal for printing
                 printTree();
             } else if ("list-flat".equals(command)) {
+                // Use of the Iterator to traverse the tree linearly
                 printFlat();
             } else if ("sort-flat".equals(command)) {
+                // Combination of Iterator and Stream API for sorted printing.
                 printSortedSimpleTasks();
             } else if ("debug-paths".equals(command)) {
                 debugPaths();
@@ -150,6 +167,10 @@ public class Main {
         }
     }
 
+    /**
+     * Prints all SimpleTask type tasks in a "flat" format,
+     * sorting them by priority (descending) and then by due date.
+     */
     private static void printSortedSimpleTasks() {
         TaskIterator it = new TaskIterator(ROOTS);
         List<SimpleTask> all = new ArrayList<>();
@@ -162,6 +183,7 @@ public class Main {
             return;
         }
         all.stream()
+                // Sorting using a Comparator and Lambdas
                 .sorted(Comparator
                         .comparing((SimpleTask t) -> t.priority().getWeight()).reversed()
                         .thenComparing(t -> t.dueDate().orElse(LocalDate.MAX)))
@@ -231,6 +253,7 @@ public class Main {
     }
 
     private static void saveToFile() {
+        // Secure saving to a temporary file with atomic move
         try {
             if (Files.notExists(DATA_DIR)) Files.createDirectories(DATA_DIR);
             Path tmp = DATA_FILE.resolveSibling("tasks.tmp");
@@ -277,7 +300,6 @@ public class Main {
             }
         }
         String joined = sb.toString().trim();
-        // Rimuove le virgolette all'inizio e alla fine se presenti
         if (joined.startsWith("\"") && joined.endsWith("\"")) {
             return joined.substring(1, joined.length() - 1);
         }
