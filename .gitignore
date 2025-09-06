@@ -1,0 +1,9 @@
+# Maven build
+target/
+
+# Log files
+*.log
+
+# OS-specific
+.DS_Store
+Thumbs.db
